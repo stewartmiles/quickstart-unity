@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using Unity.Notifications.Android;
+
 namespace Firebase.Sample.Messaging {
   using System;
   using System.Threading.Tasks;
@@ -61,6 +63,17 @@ namespace Firebase.Sample.Messaging {
     // the required dependencies to use Firebase, and if not,
     // add them if possible.
     protected virtual void Start() {
+      var customChanel = new AndroidNotificationChannel() {
+        Id = "channel_id",
+        Name = "Default Channel",
+        Importance = Importance.High,
+        Description = "Generic notifications",
+      };
+      AndroidNotificationCenter.RegisterNotificationChannel(customChanel);
+      AndroidNotificationCenter.OnNotificationReceived += (int id, AndroidNotification notification,
+                                                           string channel) => {
+        Debug.Log(String.Format("Hello from a local notification {0} {1} {2}", id, notification, channel));
+      };
       Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task => {
         dependencyStatus = task.Result;
         if (dependencyStatus == Firebase.DependencyStatus.Available) {
@@ -122,10 +135,20 @@ namespace Firebase.Sample.Messaging {
       DebugLog("Set TokenRegistrationOnInitEnabled to " + newValue);
     }
 
+    bool sentLocalNotification = false;
+
     // Exit if escape (or back, on mobile) is pressed.
     protected virtual void Update() {
       if (Input.GetKeyDown(KeyCode.Escape)) {
         Application.Quit();
+      }
+      if (isFirebaseInitialized && !sentLocalNotification) {
+        var notification = new AndroidNotification();
+        notification.Title = "SomeTitle";
+        notification.Text = "SomeText";
+        notification.FireTime = System.DateTime.Now.AddSeconds(10);
+        var identifier = AndroidNotificationCenter.SendNotification(notification, "channel_id");
+        sentLocalNotification = true;
       }
     }
 
